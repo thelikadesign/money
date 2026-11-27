@@ -208,6 +208,9 @@ main>*:nth-child(2){animation-delay:.04s}main>*:nth-child(3){animation-delay:.08
 <script>
 /* ============ data ============ */
 const LS_KEY='money.v1';
+// С какого момента вести учёт операций по счёту. Всё, что раньше, в приложение не попадает (баланс при этом настоящий).
+const ACCT_START={wise:'2026-11-27T18:00:00Z'};
+function beforeStart(acct,date){const s=ACCT_START[acct];if(!s)return false;const d=new Date(String(date).includes('T')?date:String(date).replace(' ','T'));return !isNaN(d)&&d<new Date(s);}
 const PALETTE=["p1","p2","p3","p4","p5","p6","p7","p8","p9","p10","p11","p12","p13","p14","p15","p16"];
 const DEFAULT_CATS=[
   {id:'groceries',name:'Продукты',e:'🛒',c:'p3',k:'expense'},
@@ -260,6 +263,7 @@ function migrate(s){
   s.rules=s.rules||{};s.accounts=s.accounts||{};s.rates=s.rates||{};s.deleted=s.deleted||[];
   s.sync=Object.assign({url:'',key:'',last:'',err:''},s.sync||{});
   for(const t of s.tx)if(!t.acct)t.acct=t.src==='manual'?'manual':'revolut';
+  s.tx=s.tx.filter(t=>!(t.src==='sync'&&beforeStart(t.acct,t.date)));
   return s;
 }
 let saveWarned=false;
@@ -718,7 +722,7 @@ function applySync(d){
   for(const a of d.accounts||[]){if(!a||!a.id)continue;S.accounts[a.id]={id:String(a.id),bank:a.bank,name:a.name,parts:(a.parts||[]).filter(p=>p&&okCur(p.cur)&&isFinite(+p.bal)).map(p=>({name:String(p.name||p.cur),cur:p.cur,bal:+p.bal,type:p.type||'main'})),at:d.at,src:'sync'};}
   const cancelled=new Set((d.tx||[]).filter(x=>x&&x.cancelled&&x.key).map(x=>x.key));
   if(cancelled.size)S.tx=S.tx.filter(t=>!(t.src==='sync'&&cancelled.has(t.key)));
-  const list=(d.tx||[]).filter(x=>x&&!x.cancelled&&x.key&&isFinite(+x.amount)&&x.date&&!isNaN(new Date(x.date))).map(x=>{
+  const list=(d.tx||[]).filter(x=>x&&!x.cancelled&&x.key&&isFinite(+x.amount)&&x.date&&!isNaN(new Date(x.date))&&!beforeStart(x.acct,x.date)).map(x=>{
     const amount=+x.amount;const title=x.title||'Операция';const internal=x.type==='internal';
     let kind=internal?'transfer':amount<0?'expense':'income';let sub='',preset=null;
     if(x.type==='card'&&amount>0){kind='expense';sub='возврат';}
