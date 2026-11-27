@@ -260,7 +260,7 @@ function load(){
   return migrate(s||{cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),rules:{},tx:[],seeded:false});
 }
 function migrate(s){
-  s.rules=s.rules||{};s.accounts=s.accounts||{};s.rates=s.rates||{};s.deleted=s.deleted||[];s.banks=s.banks||{};
+  s.rules=s.rules||{};s.accounts=s.accounts||{};s.rates=s.rates||{};s.deleted=s.deleted||[];s.banks=s.banks||{};s.partNames=s.partNames||{};
   s.sync=Object.assign({url:'',key:'',last:'',err:''},s.sync||{});
   for(const t of s.tx)if(!t.acct)t.acct=t.src==='manual'?'manual':'revolut';
   s.tx=s.tx.filter(t=>!(t.src==='sync'&&beforeStart(t.acct,t.date)));
@@ -493,7 +493,8 @@ function acctCards(accts){
 function acctParts(a){
   const ic={main:'💳',pocket:'✉️',currency:'💱'};
   return `<div class="group"><h3><span>Внутри счёта</span></h3><div class="list">${a.parts.map(p=>{const e=toEur(p.bal,p.cur);
-    return `<div class="row"><div class="ic">${ic[p.type]||'💳'}</div><div class="tx"><div class="t">${esc(p.name)}</div>${p.cur!=='EUR'?`<div class="s">${e==null?'курс пока неизвестен':'≈ '+fmtNeg(e)}</div>`:''}</div><div class="a num">${p.cur==='EUR'?fmtNeg(p.bal):esc(fmtCur(p.bal,p.cur))}</div></div>`;}).join('')}</div></div>`;
+    const nm=(p.id&&S.partNames[p.id])||p.name;const inner=`<div class="ic">${ic[p.type]||'💳'}</div><div class="tx"><div class="t">${esc(nm)}</div>${p.cur!=='EUR'?`<div class="s">${e==null?'курс пока неизвестен':'≈ '+fmtNeg(e)}</div>`:''}</div><div class="a num">${p.cur==='EUR'?fmtNeg(p.bal):esc(fmtCur(p.bal,p.cur))}</div>`;
+    return p.id?`<button class="row" data-act="renamepart" data-id="${esc(p.id)}" data-name="${esc(nm)}">${inner}</button>`:`<div class="row">${inner}</div>`;}).join('')}</div>${a.parts.some(p=>p.id&&p.type==='pocket')?`<p class="hint">Банк не передаёт названия конвертов. Нажми на строку, чтобы назвать её по-своему.</p>`:''}</div>`;
 }
 function plural(n,a,b,c){const m=n%100;if(m>=11&&m<=19)return c;const l=n%10;if(l===1)return a;if(l>=2&&l<=4)return b;return c;}
 function emptyState(){return `<div class="empty"><div class="big">💶</div><p>Подключи банки, и балансы с операциями будут приходить сами. Или загрузи выписку Revolut в CSV.</p><div class="actions"><button class="btn" data-act="opensync">Подключить банки</button><button class="btn secondary" data-act="import">Загрузить выписку</button></div><p class="hint" style="margin-top:18px">В Revolut: счёт → Выписка → формат CSV → скачать.</p></div>`;}
@@ -762,7 +763,7 @@ async function bankUnlink(id){
 function applySync(d){
   if(d.rates)Object.assign(S.rates,d.rates);
   const okCur=c=>/^[A-Z]{3}$/.test(c||'');
-  for(const a of d.accounts||[]){if(!a||!a.id)continue;S.accounts[a.id]={id:String(a.id),bank:a.bank,name:a.name,parts:(a.parts||[]).filter(p=>p&&okCur(p.cur)&&isFinite(+p.bal)).map(p=>({name:String(p.name||p.cur),cur:p.cur,bal:+p.bal,type:p.type||'main'})),at:d.at,src:'sync'};}
+  for(const a of d.accounts||[]){if(!a||!a.id)continue;S.accounts[a.id]={id:String(a.id),bank:a.bank,name:a.name,parts:(a.parts||[]).filter(p=>p&&okCur(p.cur)&&isFinite(+p.bal)).map(p=>({id:p.id?String(p.id):'',name:String(p.name||p.cur),cur:p.cur,bal:+p.bal,type:p.type||'main'})),at:d.at,src:'sync'};}
   if(d.banks&&typeof d.banks==='object')S.banks=d.banks;
   const fresh=new Set(d.replacePending||[]);const seen=new Set((d.tx||[]).map(x=>x&&x.key));
   if(fresh.size)S.tx=S.tx.filter(t=>!(t.src==='sync'&&t.pending&&fresh.has(t.acct)&&String(t.key).startsWith('ebp|')&&!seen.has(t.key)));
@@ -834,6 +835,7 @@ document.addEventListener('click',e=>{
     case 'opensync':openSync();break;
     case 'syncsave':saveSync();break;
     case 'syncoff':{if(confirm('Выйти? Балансы перестанут обновляться, уже загруженные операции останутся.')){S.sync={url:'',key:'',last:'',err:''};S.banks={};save();closeSheet();render(true);toast('Банки отключены');}break;}
+    case 'renamepart':{const v=prompt('Название',el.dataset.name||'');if(v!==null){const n=v.trim().slice(0,40);if(n)S.partNames[el.dataset.id]=n;else delete S.partNames[el.dataset.id];save();render(true);}break;}
     case 'bankconnect':bankConnect(el.dataset.bank);break;
     case 'bankunlink':bankUnlink(el.dataset.bank);break;
     case 'toggleapply':sheetState.applyAll=!sheetState.applyAll;renderTxSheet();break;
