@@ -66,6 +66,7 @@ main>*:nth-child(2){animation-delay:.04s}main>*:nth-child(3){animation-delay:.08
 .hero .upd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:10px;font-size:13px;color:var(--ink-2)}
 .hero .upd button{color:var(--accent);font-weight:600;font-size:13px;padding:4px 0}
 .hero .upd .err{color:var(--warn)}
+.hint.warn{color:var(--warn);padding:0 6px}
 .accts{display:flex;gap:10px;overflow-x:auto;margin:14px -16px 0;padding:0 16px 4px;scrollbar-width:none;scroll-snap-type:x proximity}
 .accts::-webkit-scrollbar{display:none}
 .acct{flex:0 0 158px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:6px;scroll-snap-align:start;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);transition:background .15s,border-color .15s}
@@ -287,7 +288,7 @@ function load(){
 }
 function migrate(s){
   s.cats=s.cats||[];for(const c of DEFAULT_CATS)if(!s.cats.some(x=>x.id===c.id)){const i=s.cats.findIndex(x=>x.k===c.k&&(x.id==='other'||x.id==='other_in'));s.cats.splice(i<0?s.cats.length:i,0,{...c});}
-  s.rules=s.rules||{};s.accounts=s.accounts||{};s.rates=s.rates||{};s.deleted=s.deleted||[];s.banks=s.banks||{};s.partNames=s.partNames||{};
+  s.rules=s.rules||{};s.accounts=s.accounts||{};s.rates=s.rates||{};s.deleted=s.deleted||[];s.banks=s.banks||{};s.partNames=s.partNames||{};s.recurHide=s.recurHide||{};
   s.sync=Object.assign({url:'',key:'',last:'',err:''},s.sync||{});
   for(const t of s.tx)if(!t.acct)t.acct=t.src==='manual'?'manual':'revolut';
   s.tx=s.tx.filter(t=>!(t.src==='sync'&&beforeStart(t.acct,t.date)));
@@ -498,7 +499,7 @@ function renderOverview(){
     </div>`;
   return `
   <div class="top"><h1>Мои деньги</h1>${monthNav()}</div>
-  ${accts.length?`${balanceHero(accts,sel)}${acctCards(accts)}${sel&&sel.parts.length&&(sel.parts.length>1||sel.parts[0].cur!=='EUR')?acctParts(sel):''}
+  ${accts.length?`${balanceHero(accts,sel)}${acctCards(accts)}${sel&&sel.parts.length&&(sel.parts.length>1||sel.parts[0].cur!=='EUR')?acctParts(sel):''}${upcomingBlock(sel)}
   <div class="card"><h2>Расходы за месяц</h2><div class="hero"><div class="big num">${fmtNeg(-st.exp)}</div>${stats}</div></div>`
   :`<div class="hero">
     <div class="label">Расходы</div>
@@ -514,6 +515,72 @@ function renderOverview(){
   <div class="card"><h2>Расходы по месяцам</h2>${bars()}</div>
   ${rest.length||top.length>3?`<div class="group"><h3><span>Все категории</span><span class="num">${fmt(st.exp)}</span></h3><div class="list">${st.cats.map(([id,v])=>{const c=id==='none'?null:cat(id);return `<button class="row" data-act="filtercat" data-cat="${id==='none'?'none':id}">${catIcon(c)}<div class="tx"><div class="t">${c?esc(c.name):'Без категории'}</div><div class="s">${Math.round(v/st.exp*100)}% расходов</div></div><div class="a num">${fmt(v)}</div><span class="chev">›</span></button>`;}).join('')}</div></div>`:''}
   `;
+}
+/* ============ регулярные платежи ============ */
+// Ищет в истории то, что списывается регулярно: та же точка, похожая сумма, раз в месяц или в неделю.
+// Отсюда считает дату и сумму следующего списания.
+const RECUR_SKIP=['groceries','food','transport','cash','fun','shopping'];
+function dnum(s){const [y,m,d]=String(s).slice(0,10).split('-').map(Number);return Date.UTC(y,m-1,d)/864e5;}
+function dstr(n){return new Date(n*864e5).toISOString().slice(0,10);}
+function plusMonth(s){let [y,m,d]=s.split('-').map(Number);m++;if(m>12){m=1;y++;}const dim=new Date(Date.UTC(y,m,0)).getUTCDate();return y+'-'+String(m).padStart(2,'0')+'-'+String(Math.min(d,dim)).padStart(2,'0');}
+function today(){return localStamp(new Date().toISOString()).slice(0,10);}
+function recurring(withHidden){
+  const groups={};
+  for(const t of S.tx){
+    if(t.kind!=='expense'||t.amount>=0||t.excluded||t.mkey==='atm'||t.mkey==='internal')continue;
+    if(RECUR_SKIP.includes(t.cat))continue;
+    (groups[t.mkey]=groups[t.mkey]||[]).push(t);
+  }
+  const now=dnum(today());const out=[];
+  for(const [mkey,list] of Object.entries(groups)){
+    if(!withHidden&&S.recurHide[mkey])continue;
+    const byDay={};for(const t of list){const d=t.date.slice(0,10);byDay[d]=(byDay[d]||0)+t.amount;}
+    const days=Object.keys(byDay).sort();const last=list.reduce((a,b)=>a.date>b.date?a:b);
+    const amts=days.slice(-3).map(d=>-byDay[d]);const lo=Math.min(...amts),hi=Math.max(...amts);
+    const same=hi-lo<=Math.max(2,hi*0.2);
+    let period=null,approx=false;
+    if(days.length>=2&&same){
+      const gaps=days.slice(-4).map((d,i,a)=>i?dnum(d)-dnum(a[i-1]):null).filter(x=>x!==null);
+      if(gaps.every(g=>g>=25&&g<=36))period='month';
+      else if(days.length>=3&&gaps.every(g=>g>=6&&g<=8))period='week';
+    }
+    if(!period&&days.length===1&&last.cat==='subs'&&now-dnum(days[0])<=40){period='month';approx=true;}
+    if(!period)continue;
+    const lastDay=days[days.length-1];
+    const next=period==='month'?plusMonth(lastDay):dstr(dnum(lastDay)+7);
+    if(dnum(next)<now-3)continue; // давно не списывалось: скорее всего отменено
+    out.push({mkey,title:last.title,acct:last.acct,cat:last.cat,amount:-byDay[lastDay],period,next,approx,hidden:!!S.recurHide[mkey]});
+  }
+  return out.sort((a,b)=>a.next.localeCompare(b.next));
+}
+function relDay(s){const n=dnum(s)-dnum(today());if(n<0)return 'ожидается';if(n===0)return 'сегодня';if(n===1)return 'завтра';return shortDate(s);}
+function recurRow(r,act){
+  const c=r.cat?cat(r.cat):null;
+  const sub=[relDay(r.next),showBank||act?bankOf(r.acct).name:'',r.period==='week'?'каждую неделю':'каждый месяц'].filter(Boolean).join(' · ')+(r.approx?' · примерно':'');
+  return `<div class="row">${catIcon(c)}<div class="tx"><div class="t">${esc(prettyTitle(r.title))}</div><div class="s">${esc(sub)}</div></div><div class="a num">${fmtNeg(-r.amount)}</div>${act||''}</div>`;
+}
+// Хватит ли денег на основном счёте: конверты не считаем, их сюда не тратят
+function mainBalance(id){const a=S.accounts[id];if(!a)return null;let v=null;for(const p of a.parts)if(p.type!=='pocket'&&p.cur==='EUR')v=(v||0)+p.bal;return v;}
+function upcomingBlock(sel){
+  const now=dnum(today());
+  const list=recurring().filter(r=>dnum(r.next)-now<=14&&(!sel||r.acct===sel.id));
+  if(!list.length)return '';
+  const total=list.reduce((s,r)=>s+r.amount,0);
+  const need={};for(const r of list)need[r.acct]=(need[r.acct]||0)+r.amount;
+  const warns=Object.entries(need).map(([id,sum])=>{const bal=mainBalance(id);if(bal==null||bal>=sum)return '';
+    const lastDay=list.filter(r=>r.acct===id).map(r=>r.next).sort().pop();
+    return `<p class="hint warn">⚠︎ На ${esc(bankOf(id).name)} сейчас ${fmtNeg(bal)}, до ${shortDate(lastDay)} спишется ${fmt(sum)}. Не хватит ${fmt(sum-bal)}.</p>`;}).join('');
+  return `<div class="group"><h3><span>Скоро спишется</span><span class="num">${fmt(total)}</span></h3><div class="list">${list.map(r=>recurRow(r)).join('')}</div>${warns}</div>`;
+}
+function openRecurring(){
+  const all=recurring(true);const shown=all.filter(r=>!r.hidden),hidden=all.filter(r=>r.hidden);
+  const month=shown.reduce((s,r)=>s+(r.period==='week'?r.amount*52/12:r.amount),0);
+  const hideBtn=r=>`<button data-act="recurhide" data-k="${esc(r.mkey)}" style="color:var(--ink-2);font-size:13px;font-weight:500;margin-left:4px">Скрыть</button>`;
+  const showBtn=r=>`<button data-act="recurshow" data-k="${esc(r.mkey)}" style="color:var(--accent);font-size:13px;font-weight:600;margin-left:4px">Вернуть</button>`;
+  openSheet(`<h2>Регулярные платежи</h2><div class="sub">${shown.length?`Примерно ${fmt(month)} в месяц. Найдено по истории операций: то, что списывается каждый месяц или неделю.`:'Пока ничего не найдено. Нужно хотя бы два списания с разницей в месяц.'}</div>
+    ${shown.length?`<div class="list">${shown.map(r=>recurRow(r,hideBtn(r))).join('')}</div><p class="hint">Если это не регулярный платёж, нажми «Скрыть».</p>`:''}
+    ${hidden.length?`<div class="group"><h3><span>Скрытые</span></h3><div class="list">${hidden.map(r=>recurRow(r,showBtn(r))).join('')}</div></div>`:''}
+    <div class="actions"><button class="btn secondary block" data-act="closesheet">Закрыть</button></div>`);
 }
 function balanceHero(accts,sel){
   const list=sel?[sel]:accts;let total=0;for(const a of list)total+=acctTotal(a).eur;
@@ -615,6 +682,7 @@ function renderMore(){
   <div class="top"><h1>Ещё</h1></div>
   <div class="group"><h3><span>Данные</span></h3><div class="list">
     <button class="row" data-act="opensync"><div class="ic" style="background:var(--accent-tint)">🔄</div><div class="tx"><div class="t">Банки</div><div class="s">${syncOn()?(S.sync.err?esc(S.sync.err):S.sync.last?'Обновлено '+ago(S.sync.last):'Подключено'):'Балансы и операции приходят сами'}</div></div><span class="chev">›</span></button>
+    <button class="row" data-act="openrecur"><div class="ic">🔁</div><div class="tx"><div class="t">Регулярные платежи</div><div class="s">${(()=>{const n=recurring().length;return n?n+' '+plural(n,'платёж','платежа','платежей')+', когда и сколько спишется':'Подписки и аренда, когда спишутся'})()}</div></div><span class="chev">›</span></button>
     <button class="row" data-act="import"><div class="ic" style="background:var(--accent-tint)">📥</div><div class="tx"><div class="t">Загрузить выписку Revolut</div><div class="s">CSV за любой период, дубли не добавятся</div></div><span class="chev">›</span></button>
     <button class="row" data-act="addtx"><div class="ic">✏️</div><div class="tx"><div class="t">Добавить операцию вручную</div><div class="s">Например, наличные</div></div><span class="chev">›</span></button>
     <button class="row" data-act="triage"><div class="ic">❔</div><div class="tx"><div class="t">Без категории</div><div class="s">${unc?unc+' '+plural(unc,'операция ждёт','операции ждут','операций ждут')+' категории':'Всё разобрано'}</div></div><span class="chev">›</span></button>
@@ -880,6 +948,9 @@ document.addEventListener('click',e=>{
     case 'opensync':openSync();break;
     case 'syncsave':saveSync();break;
     case 'syncoff':{if(confirm('Выйти? Балансы перестанут обновляться, уже загруженные операции останутся.')){S.sync={url:'',key:'',last:'',err:''};S.banks={};save();closeSheet();render(true);toast('Банки отключены');}break;}
+    case 'openrecur':openRecurring();break;
+    case 'recurhide':S.recurHide[el.dataset.k]=true;save();openRecurring();render(true);break;
+    case 'recurshow':delete S.recurHide[el.dataset.k];save();openRecurring();render(true);break;
     case 'renamepart':{const v=prompt('Название',el.dataset.name||'');if(v!==null){const n=v.trim().slice(0,40);if(n)S.partNames[el.dataset.id]=n;else delete S.partNames[el.dataset.id];save();render(true);}break;}
     case 'bankconnect':bankConnect(el.dataset.bank);break;
     case 'bankunlink':bankUnlink(el.dataset.bank);break;
