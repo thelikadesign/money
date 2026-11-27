@@ -415,7 +415,7 @@ let showBank=false;
 function render(keep){
   if(UI.acct&&!acctIds().includes(UI.acct))UI.acct=null;
   showBank=!UI.acct&&acctIds().length>1;
-  if(!UI.month){const ms=monthsAvailable();const last=S.tx.length?S.tx[0].date.slice(0,7):thisMonth();UI.month=ms.includes(last)?last:ms[ms.length-1];}
+  if(!UI.month)UI.month=thisMonth();
   view.innerHTML=UI.tab==='overview'?renderOverview():UI.tab==='tx'?renderTx():renderMore();
   document.getElementById('tabs').innerHTML=[
     ['overview','Обзор','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12l6 4.5" stroke-linecap="round"/></svg>'],
@@ -461,7 +461,7 @@ function renderOverview(){
   ${st.exp?`<div class="card"><h2>По категориям</h2><div class="donut-wrap">${donut(slices,st.exp)}<div class="legend">${slices.map(s=>{
       const name=s.rest?'Остальное':s.c?s.c.name:'Без категории';const col=s.rest||!s.c?'var(--ink-3)':`var(--${s.c.c})`;
       return `<button data-act="filtercat" data-cat="${s.rest?'':s.id}"><span class="sw" style="background:${col};color:${col}"></span><span class="nm">${esc(name)}</span><span class="am num">${fmt(s.v)}</span><span class="pc num">${Math.round(s.v/st.exp*100)}%</span></button>`;}).join('')}</div></div></div>`
-    :`<div class="card"><h2>По категориям</h2><p class="muted" style="font-size:15px">В этом месяце расходов пока нет.</p></div>`}
+    :`<div class="card"><h2>По категориям</h2><p class="muted" style="font-size:15px">${S.tx.length&&S.tx[0].date.slice(0,7)<UI.month?`За этот месяц данных ещё нет. Последняя операция: ${shortDate(S.tx[0].date)}.`:'В этом месяце расходов пока нет.'}</p></div>`}
   <div class="card"><h2>Расходы по месяцам</h2>${bars()}</div>
   ${rest.length||top.length>3?`<div class="group"><h3><span>Все категории</span><span class="num">${fmt(st.exp)}</span></h3><div class="list">${st.cats.map(([id,v])=>{const c=id==='none'?null:cat(id);return `<button class="row" data-act="filtercat" data-cat="${id==='none'?'none':id}">${catIcon(c)}<div class="tx"><div class="t">${c?esc(c.name):'Без категории'}</div><div class="s">${Math.round(v/st.exp*100)}% расходов</div></div><div class="a num">${fmt(v)}</div><span class="chev">›</span></button>`;}).join('')}</div></div>`:''}
   `;
@@ -690,7 +690,7 @@ const fileInput=document.getElementById('file');
 fileInput.addEventListener('change',()=>{
   const f=fileInput.files[0];if(!f)return;
   const rd=new FileReader();
-  rd.onload=()=>{try{const {list,stats,balances}=parseRevolut(rd.result);const r=importList(list);applyCsvBalances(balances);UI.month=null;render();openImportResult(r,stats);}catch(e){toast(e.message||'Не удалось прочитать файл');}fileInput.value='';};
+  rd.onload=()=>{try{const {list,stats,balances}=parseRevolut(rd.result);const r=importList(list);applyCsvBalances(balances);UI.month=list.length?list.reduce((m,t)=>t.date>m?t.date:m,'').slice(0,7):null;render();openImportResult(r,stats);}catch(e){toast(e.message||'Не удалось прочитать файл');}fileInput.value='';};
   rd.readAsText(f,'utf-8');
 });
 
