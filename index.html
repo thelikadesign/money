@@ -260,7 +260,7 @@ function load(){
   return migrate(s||{cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),rules:{},tx:[],seeded:false});
 }
 function migrate(s){
-  s.rules=s.rules||{};s.accounts=s.accounts||{};s.rates=s.rates||{};s.deleted=s.deleted||[];
+  s.rules=s.rules||{};s.accounts=s.accounts||{};s.rates=s.rates||{};s.deleted=s.deleted||[];s.banks=s.banks||{};
   s.sync=Object.assign({url:'',key:'',last:'',err:''},s.sync||{});
   for(const t of s.tx)if(!t.acct)t.acct=t.src==='manual'?'manual':'revolut';
   s.tx=s.tx.filter(t=>!(t.src==='sync'&&beforeStart(t.acct,t.date)));
@@ -460,7 +460,7 @@ function renderOverview(){
     <div class="big num">${fmtNeg(-st.exp)}</div>
     ${stats}
   </div>
-  ${syncOn()?'':`<button class="banner" data-act="opensync"><span>Подключить автообновление</span><span class="arrow">›</span></button>`}`}
+  ${syncOn()?'':`<button class="banner" data-act="opensync"><span>Подключить банки</span><span class="arrow">›</span></button>`}`}
   ${unc?`<button class="banner" data-act="triage"><span>Без категории: ${unc} ${plural(unc,'операция','операции','операций')}. Разобрать</span><span class="arrow">›</span></button>`:''}
   ${st.exp?`<div class="card"><h2>По категориям</h2><div class="donut-wrap">${donut(slices,st.exp)}<div class="legend">${slices.map(s=>{
       const name=s.rest?'Остальное':s.c?s.c.name:'Без категории';const col=s.rest||!s.c?'var(--ink-3)':`var(--${s.c.c})`;
@@ -483,7 +483,7 @@ function syncLine(sel,accts){
   if((sel?[sel]:accts).some(a=>acctTotal(a).miss))bits.push('Без валют с неизвестным курсом');
   let txt=`<span>${syncing?'Обновление…':bits.join(' · ')}</span>`;
   if(on&&S.sync.err&&!syncing&&!(sel&&sel.src==='csv'))txt=`<span class="err">${esc(S.sync.err)}</span>`;
-  const btn=on?(syncing?'':`<button data-act="sync">Обновить</button>`):`<button data-act="opensync">Подключить автообновление</button>`;
+  const btn=on?(syncing?'':`<button data-act="sync">Обновить</button>`):`<button data-act="opensync">Подключить банки</button>`;
   return txt+btn;
 }
 function acctCards(accts){
@@ -496,7 +496,7 @@ function acctParts(a){
     return `<div class="row"><div class="ic">${ic[p.type]||'💳'}</div><div class="tx"><div class="t">${esc(p.name)}</div>${p.cur!=='EUR'?`<div class="s">${e==null?'курс пока неизвестен':'≈ '+fmtNeg(e)}</div>`:''}</div><div class="a num">${p.cur==='EUR'?fmtNeg(p.bal):esc(fmtCur(p.bal,p.cur))}</div></div>`;}).join('')}</div></div>`;
 }
 function plural(n,a,b,c){const m=n%100;if(m>=11&&m<=19)return c;const l=n%10;if(l===1)return a;if(l>=2&&l<=4)return b;return c;}
-function emptyState(){return `<div class="empty"><div class="big">💶</div><p>Подключи автообновление или загрузи выписку Revolut в CSV. Операции разложатся по категориям сами.</p><div class="actions"><button class="btn" data-act="opensync">Подключить автообновление</button><button class="btn secondary" data-act="import">Загрузить выписку</button></div><p class="hint" style="margin-top:18px">В Revolut: счёт → Выписка → формат CSV → скачать.</p></div>`;}
+function emptyState(){return `<div class="empty"><div class="big">💶</div><p>Подключи банки, и балансы с операциями будут приходить сами. Или загрузи выписку Revolut в CSV.</p><div class="actions"><button class="btn" data-act="opensync">Подключить банки</button><button class="btn secondary" data-act="import">Загрузить выписку</button></div><p class="hint" style="margin-top:18px">В Revolut: счёт → Выписка → формат CSV → скачать.</p></div>`;}
 
 function donut(slices,total){
   const R=60,SW=20,cx=75,cy=75,gap=2.2;const C=2*Math.PI*R;let a0=-Math.PI/2;let paths='';
@@ -568,7 +568,7 @@ function renderMore(){
   return `
   <div class="top"><h1>Ещё</h1></div>
   <div class="group"><h3><span>Данные</span></h3><div class="list">
-    <button class="row" data-act="opensync"><div class="ic" style="background:var(--accent-tint)">🔄</div><div class="tx"><div class="t">Автообновление</div><div class="s">${syncOn()?(S.sync.err?esc(S.sync.err):S.sync.last?'Обновлено '+ago(S.sync.last):'Подключено'):'Балансы и операции приходят сами'}</div></div><span class="chev">›</span></button>
+    <button class="row" data-act="opensync"><div class="ic" style="background:var(--accent-tint)">🔄</div><div class="tx"><div class="t">Банки</div><div class="s">${syncOn()?(S.sync.err?esc(S.sync.err):S.sync.last?'Обновлено '+ago(S.sync.last):'Подключено'):'Балансы и операции приходят сами'}</div></div><span class="chev">›</span></button>
     <button class="row" data-act="import"><div class="ic" style="background:var(--accent-tint)">📥</div><div class="tx"><div class="t">Загрузить выписку Revolut</div><div class="s">CSV за любой период, дубли не добавятся</div></div><span class="chev">›</span></button>
     <button class="row" data-act="addtx"><div class="ic">✏️</div><div class="tx"><div class="t">Добавить операцию вручную</div><div class="s">Например, наличные</div></div><span class="chev">›</span></button>
     <button class="row" data-act="triage"><div class="ic">❔</div><div class="tx"><div class="t">Без категории</div><div class="s">${unc?unc+' '+plural(unc,'операция ждёт','операции ждут','операций ждут')+' категории':'Всё разобрано'}</div></div><span class="chev">›</span></button>
@@ -581,7 +581,7 @@ function renderMore(){
     <button class="row" data-act="restore"><div class="ic">📋</div><div class="tx"><div class="t">Восстановить из копии</div><div class="s">Вставить сохранённые данные</div></div><span class="chev">›</span></button>
     <button class="row" data-act="wipe"><div class="ic" style="background:color-mix(in srgb,var(--bad) 18%,transparent)">🗑️</div><div class="tx"><div class="t" style="color:var(--bad)">Удалить все данные</div><div class="s">Категории и правила тоже сбросятся</div></div></button>
   </div></div>
-  <p class="hint" style="text-align:center;margin-top:24px">Данные хранятся только на этом устройстве. Сервер автообновления передаёт их из банка и ничего не сохраняет.</p>
+  <p class="hint" style="text-align:center;margin-top:24px">Данные хранятся только на этом устройстве. По пути из банка они нигде не сохраняются.</p>
   `;
 }
 function ruleLabel(k){if(k==='atm')return 'Банкомат';if(k==='payment')return 'Перевод «Payment»';if(k.startsWith('to:'))return 'Перевод → '+titleCase(k.slice(3));if(k.startsWith('from:'))return 'Перевод от '+titleCase(k.slice(5));return titleCase(k);}
@@ -694,49 +694,101 @@ const fileInput=document.getElementById('file');
 fileInput.addEventListener('change',()=>{
   const f=fileInput.files[0];if(!f)return;
   const rd=new FileReader();
-  rd.onload=()=>{try{const {list,stats,balances}=parseRevolut(rd.result);const r=importList(list);applyCsvBalances(balances);UI.month=list.length?list.reduce((m,t)=>t.date>m?t.date:m,'').slice(0,7):null;render();openImportResult(r,stats);}catch(e){toast(e.message||'Не удалось прочитать файл');}fileInput.value='';};
+  rd.onload=()=>{try{const {list,stats,balances}=parseRevolut(rd.result);if(list.length){const days=list.map(t=>t.date.slice(0,10)).sort();const lo=days[0],hi=days[days.length-1];S.tx=S.tx.filter(t=>!(t.src==='sync'&&t.acct==='revolut'&&t.date.slice(0,10)>=lo&&t.date.slice(0,10)<=hi));}const r=importList(list);applyCsvBalances(balances);UI.month=list.length?list.reduce((m,t)=>t.date>m?t.date:m,'').slice(0,7):null;render();openImportResult(r,stats);}catch(e){toast(e.message||'Не удалось прочитать файл');}fileInput.value='';};
   rd.readAsText(f,'utf-8');
 });
 
 /* ============ sync ============ */
 let syncing=false;
 function openSync(){
-  const c=S.sync;const on=syncOn();
-  openSheet(`<h2>Автообновление</h2><div class="sub">Приложение само забирает балансы и операции через твой сервер. Доступ только на чтение. Пароль хранится на этом устройстве.</div>
-    <div class="field"><label>Адрес сервера</label><input id="s-url" type="url" inputmode="url" autocapitalize="off" autocorrect="off" autocomplete="off" value="${esc(c.url||SYNC_DEFAULT)}"></div>
-    <div class="field"><label>Пароль</label><input id="s-pass" type="password" autocomplete="off" placeholder="${on?'Сохранён. Введи новый, чтобы сменить':'Тот, что задан на сервере'}"></div>
-    ${on&&(c.err||c.last)?`<p class="hint">${c.err?esc(c.err):'Последнее обновление: '+ago(c.last)+'.'}</p>`:''}
-    <div class="actions"><button class="btn block" data-act="syncsave">${on?'Сохранить и обновить':'Подключить'}</button><button class="btn secondary block" data-act="closesheet">Закрыть</button>${on?`<button class="btn danger block" data-act="syncoff">Отключить</button>`:''}</div>`);
+  if(syncOn()){openBanks();return;}
+  sheetState={kind:'login'};
+  openSheet(`<h2>Банки</h2><div class="sub">Введи пароль приложения. После этого балансы и операции будут приходить сами. Доступ к банкам только на чтение.</div>
+    <div class="field"><label>Пароль</label><input id="s-pass" type="password" autocomplete="off" placeholder="Тот, что задан при настройке"></div>
+    <div class="actions"><button class="btn block" data-act="syncsave">Войти</button><button class="btn secondary block" data-act="closesheet">Закрыть</button></div>`);
 }
 async function saveSync(){
-  const url=document.getElementById('s-url').value.trim().replace(/\/+$/,'');const pass=document.getElementById('s-pass').value;
-  if(!/^https?:\/\//.test(url)){toast('Проверь адрес сервера');return;}
-  if(!pass&&!S.sync.key){toast('Введи пароль');return;}
-  if(pass){if(!window.crypto||!crypto.subtle){toast('Открой приложение по ссылке, а не из файла');return;}S.sync.key=await sha256hex(pass);}
-  if(url!==S.sync.url)S.sync.last='';
-  S.sync.url=url;S.sync.err='';save();closeSheet();syncNow(true);
+  const pass=document.getElementById('s-pass').value;
+  if(!pass){toast('Введи пароль');return;}
+  if(!window.crypto||!crypto.subtle){toast('Открой приложение по ссылке, а не из файла');return;}
+  S.sync.key=await sha256hex(pass);S.sync.url=S.sync.url||SYNC_DEFAULT;S.sync.last='';S.sync.err='';save();closeSheet();
+  await syncNow(true);
+  if(S.sync.err==='Пароль не подошёл'){S.sync.key='';save();render(true);openSync();}
+}
+async function api(path){
+  const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),30000);
+  try{const r=await fetch(S.sync.url+path,{headers:{Authorization:'Bearer '+S.sync.key},cache:'no-store',signal:ctl.signal});
+    if(r.status===401)return {ok:false,error:'Пароль не подошёл'};
+    const d=await r.json().catch(()=>null);return d||{ok:false,error:'Сервер ответил ошибкой '+r.status};
+  }catch(e){return {ok:false,error:'Нет связи с сервером'};}
+  finally{clearTimeout(timer);}
+}
+const BANK_LIST=['wise','revolut','caixa'];
+function bankState(id){
+  const b=S.banks[id];
+  if(!b)return {text:'Проверка…',act:''};
+  if(id==='wise')return b.linked?{text:'Подключён',act:''}:{text:'Не подключён',act:''};
+  if(b.relink)return {text:'Нужно подтвердить доступ заново',act:'Подтвердить'};
+  if(b.linked)return {text:b.validUntil?'Подключён до '+shortDate(b.validUntil):'Подключён',act:'',unlink:true};
+  if(!b.ready)return {text:'Скоро',act:''};
+  return {text:'Не подключён',act:'Подключить'};
+}
+function openBanks(){
+  sheetState={kind:'banks'};renderBanks();
+  api('/bank/status').then(d=>{
+    if(d&&d.ok&&d.banks)S.banks=d.banks;
+    else if(!S.banks.wise)S.banks={wise:{linked:!!S.accounts.wise},revolut:{ready:false},caixa:{ready:false}};
+    save();if(sheetState.kind==='banks'&&root.innerHTML)renderBanks();
+  });
+}
+function renderBanks(){
+  openSheet(`<h2>Банки</h2><div class="sub">Балансы и операции приходят сами. Доступ к банкам только на чтение.</div>
+    <div class="list">${BANK_LIST.map(id=>{const b=BANKS[id];const st=bankState(id);
+      return `<div class="row"><div class="ic" style="background:color-mix(in srgb,var(--${b.c}) 22%,transparent)">${esc(b.name[0])}</div><div class="tx"><div class="t">${esc(b.name)}</div><div class="s">${esc(st.text)}</div></div>${st.act?`<button data-act="bankconnect" data-bank="${id}" style="color:var(--accent);font-size:14px;font-weight:600">${st.act}</button>`:st.unlink?`<button data-act="bankunlink" data-bank="${id}" style="color:var(--bad);font-size:14px;font-weight:500">Отключить</button>`:''}</div>`;}).join('')}</div>
+    ${S.sync.err?`<p class="hint">${esc(S.sync.err)}</p>`:S.sync.last?`<p class="hint">Обновлено ${ago(S.sync.last)}.</p>`:''}
+    <div class="actions"><button class="btn block" data-act="sync">Обновить</button><button class="btn secondary block" data-act="closesheet">Закрыть</button><button class="btn danger block" data-act="syncoff">Выйти</button></div>`);
+}
+async function bankConnect(id){
+  toast('Открываю '+BANKS[id].name+'…');
+  const d=await api('/bank/start?bank='+encodeURIComponent(id));
+  if(d&&d.ok&&d.url){location.href=d.url;}else toast((d&&d.error)||'Не получилось начать подключение');
+}
+async function bankUnlink(id){
+  if(!confirm('Отключить '+BANKS[id].name+'? Уже загруженные операции останутся.'))return;
+  const d=await api('/bank/unlink?bank='+encodeURIComponent(id));
+  if(d&&d.ok){if(S.accounts[id]&&S.accounts[id].src==='sync')delete S.accounts[id];if(S.banks[id]){S.banks[id].linked=false;S.banks[id].relink=false;}save();render(true);renderBanks();toast(BANKS[id].name+' отключён');}
+  else toast((d&&d.error)||'Не получилось отключить');
 }
 function applySync(d){
   if(d.rates)Object.assign(S.rates,d.rates);
   const okCur=c=>/^[A-Z]{3}$/.test(c||'');
   for(const a of d.accounts||[]){if(!a||!a.id)continue;S.accounts[a.id]={id:String(a.id),bank:a.bank,name:a.name,parts:(a.parts||[]).filter(p=>p&&okCur(p.cur)&&isFinite(+p.bal)).map(p=>({name:String(p.name||p.cur),cur:p.cur,bal:+p.bal,type:p.type||'main'})),at:d.at,src:'sync'};}
+  if(d.banks&&typeof d.banks==='object')S.banks=d.banks;
+  const fresh=new Set(d.replacePending||[]);const seen=new Set((d.tx||[]).map(x=>x&&x.key));
+  if(fresh.size)S.tx=S.tx.filter(t=>!(t.src==='sync'&&t.pending&&fresh.has(t.acct)&&String(t.key).startsWith('ebp|')&&!seen.has(t.key)));
+  // Выписка, загруженная раньше, главнее: то, что в ней уже есть, из банка повторно не берём
+  const csv=S.tx.filter(t=>t.src==='revolut');const csvMax={};
+  for(const t of csv){const day=t.date.slice(0,10);if(!csvMax.revolut||day>csvMax.revolut)csvMax.revolut=day;}
+  const inCsv=x=>{if(x.acct!=='revolut'||!csv.length)return false;const day=localStamp(x.date).slice(0,10);if(day<csvMax.revolut)return true;
+    const when=new Date(x.date).getTime();return csv.some(t=>Math.abs(t.amount-(+x.amount))<0.005&&Math.abs(toDate(t.date).getTime()-when)<=4*864e5);};
   const cancelled=new Set((d.tx||[]).filter(x=>x&&x.cancelled&&x.key).map(x=>x.key));
   if(cancelled.size)S.tx=S.tx.filter(t=>!(t.src==='sync'&&cancelled.has(t.key)));
-  const list=(d.tx||[]).filter(x=>x&&!x.cancelled&&x.key&&isFinite(+x.amount)&&x.date&&!isNaN(new Date(x.date))&&!beforeStart(x.acct,x.date)).map(x=>{
+  const list=(d.tx||[]).filter(x=>x&&!x.cancelled&&x.key&&isFinite(+x.amount)&&x.date&&!isNaN(new Date(x.date))&&!beforeStart(x.acct,x.date)&&!inCsv(x)).map(x=>{
     const amount=+x.amount;const title=x.title||'Операция';const internal=x.type==='internal';
     let kind=internal?'transfer':amount<0?'expense':'income';let sub='',preset=null;
     if(x.type==='card'&&amount>0){kind='expense';sub='возврат';}
     if(x.type==='transfer')preset=amount<0?'transfers':'transfer_in';
     if(x.orig&&okCur(x.orig.cur)&&x.orig.cur!=='EUR'&&isFinite(+x.orig.amount))sub=(sub?sub+' · ':'')+fmtCur(Math.abs(x.orig.amount),x.orig.cur);
-    const mkey=internal?'internal':x.type==='transfer'?(amount<0?'to:':'from:')+norm(title):norm(title);
-    return {id:uid(),key:x.key,date:localStamp(x.date),done:'',title:internal?'Между своими счетами':title,sub:internal?title:sub,desc:x.desc||'',mkey,amount,cur:'EUR',kind,preset,pending:!!x.pending,locked:false,excluded:false,src:'sync',acct:x.acct};
+    let mkey=internal?'internal':x.type==='transfer'?(amount<0?'to:':'from:')+norm(title):norm(title);let shown=internal?'Между своими счетами':title;
+    if(!internal&&amount<0&&/\batm\b|cash withdrawal|cash at |levantamento/i.test(title)){mkey='atm';preset='cash';sub=(sub?sub+' · ':'')+title;shown='Банкомат';}
+    return {id:uid(),key:x.key,date:localStamp(x.date),done:'',title:shown,sub:internal?title:sub,desc:x.desc||'',mkey,amount,cur:'EUR',kind,preset,pending:!!x.pending,locked:false,excluded:false,src:'sync',acct:x.acct};
   });
   return importList(list);
 }
 async function syncNow(manual){
   const c=S.sync;if(!c.url||!c.key||syncing)return;
   syncing=true;
-  const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),30000);
+  const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),60000);
   try{
     if(manual)render(true);
     const since=c.last?new Date(new Date(c.last).getTime()-7*864e5):new Date(Date.now()-180*864e5);
@@ -744,7 +796,7 @@ async function syncNow(manual){
     if(r.status===401)throw new Error('Пароль не подошёл');
     if(r.status===429)throw new Error('Слишком много попыток. Попробуй через 10 минут');
     if(!r.ok)throw new Error('Сервер ответил ошибкой '+r.status);
-    const first=!c.last;const d=await r.json();const res=applySync(d);if(first&&res.added)UI.month=null;
+    const first=!c.last;const d=await r.json();const res=applySync(d);if(sheetState.id&&!S.tx.some(t=>t.id===sheetState.id)){sheetState={};closeSheet();}if(first&&res.added)UI.month=null;
     c.err=(d.errors||[]).map(e=>e.message).join('. ');
     if((d.accounts||[]).length)c.last=d.at||new Date().toISOString();
     save();
@@ -778,10 +830,12 @@ document.addEventListener('click',e=>{
       else{if(S.rules[t.mkey]==='__own'){delete S.rules[t.mkey];reapplyRule(t.mkey);}t.kind=k;t.cat=null;}
       save();renderTxSheet();render(true);break;}
     case 'selacct':UI.acct=UI.acct===el.dataset.id?null:el.dataset.id;render(true);break;
-    case 'sync':syncNow(true);break;
+    case 'sync':syncNow(true).then(()=>{if(sheetState.kind==='banks'&&root.innerHTML)renderBanks();});break;
     case 'opensync':openSync();break;
     case 'syncsave':saveSync();break;
-    case 'syncoff':{if(confirm('Отключить автообновление? Уже загруженные операции останутся.')){S.sync={url:'',key:'',last:'',err:''};save();closeSheet();render(true);toast('Автообновление отключено');}break;}
+    case 'syncoff':{if(confirm('Выйти? Балансы перестанут обновляться, уже загруженные операции останутся.')){S.sync={url:'',key:'',last:'',err:''};S.banks={};save();closeSheet();render(true);toast('Банки отключены');}break;}
+    case 'bankconnect':bankConnect(el.dataset.bank);break;
+    case 'bankunlink':bankUnlink(el.dataset.bank);break;
     case 'toggleapply':sheetState.applyAll=!sheetState.applyAll;renderTxSheet();break;
     case 'toggleexcl':{const t=S.tx.find(x=>x.id===sheetState.id);t.excluded=!t.excluded;save();renderTxSheet();render();break;}
     case 'deltx':{if(confirm('Удалить эту операцию?')){const t=S.tx.find(x=>x.id===sheetState.id);if(t&&t.src!=='manual'){S.deleted.push(t.key);if(S.deleted.length>500)S.deleted.shift();}S.tx=S.tx.filter(x=>x.id!==sheetState.id);save();closeSheet();render();}break;}
