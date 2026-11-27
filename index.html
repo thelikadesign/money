@@ -258,13 +258,20 @@ const BUILTIN_RULES=[
 function fp(str){let h1=0xdeadbeef,h2=0x41c6ce57;for(let i=0;i<str.length;i++){const ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677);}
   h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909);
   return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);}
-// Люди, которым ты регулярно переводишь, и категория. Ключ: отпечаток слова из имени. Только для расходов.
-const PEOPLE_FP={"w3n9ilcsrl":"home","jeoi8f0k6":"home","wd7rrfwaat":"home","23v428zleee":"home","1umin8g4gjb":"home","ek64n13onh":"home","1jc19smaiv3":"home","1aq55s9ves2":"home","1c5ex921if2":"home","1aexulbsw9r":"sport","15uemxxvejy":"sport","rpirphdiaa":"sport","27fc3rrrjt7":"sport","1wk1t71ffkq":"sport","1f7ttgy7997":"sport","29l1d6svoh9":"sport","1ktbaj7rggp":"sport","c8uxmwrwya":"sport","1b8fau2mjaa":"sport","19ot61ntu24":"sport","28hc56spl5s":"sport","3h3g2t12k1":"transport","1an1vhzceop":"transport","1nr1agcxxko":"transfers","1d2nw9d1wwt":"transfers","1j2mlvtbe7j":"transfers","nq0fuvdn6e":"work","2670j8qvly5":"work","1npoukqfqkf":"work","ssspzla4ro":"work","1z174slwzpv":"work","p8vn5le4gr":"work","1fgrs7t0ilw":"work"};
+// Люди, которым ты переводишь, и категория. Ключ: отпечаток слова из имени. Только для расходов.
+// Значение с датами действует только для переводов в этот период, дальше категорию выбираешь сама.
+const PEOPLE_FP={"w3n9ilcsrl":"home","jeoi8f0k6":"home","wd7rrfwaat":"home","23v428zleee":"home","1umin8g4gjb":"home","ek64n13onh":"home","1jc19smaiv3":"home","1aq55s9ves2":"home","1c5ex921if2":"home","1aexulbsw9r":{"c":"sport","to":"2026-11-27"},"15uemxxvejy":{"c":"sport","to":"2026-11-27"},"rpirphdiaa":{"c":"sport","to":"2026-11-27"},"27fc3rrrjt7":{"c":"sport","to":"2026-11-27"},"1wk1t71ffkq":{"c":"sport","to":"2026-11-27"},"1f7ttgy7997":{"c":"sport","to":"2026-11-27"},"29l1d6svoh9":{"c":"sport","to":"2026-11-27"},"1ktbaj7rggp":{"c":"sport","to":"2026-11-27"},"c8uxmwrwya":"sport","1b8fau2mjaa":"sport","19ot61ntu24":"sport","28hc56spl5s":"sport","3h3g2t12k1":{"c":"transport","from":"2026-11-19","to":"2026-11-21"},"1an1vhzceop":{"c":"transport","from":"2026-11-19","to":"2026-11-21"},"1nr1agcxxko":"transfers","1d2nw9d1wwt":"transfers","1j2mlvtbe7j":"transfers","nq0fuvdn6e":"work","2670j8qvly5":"work","1npoukqfqkf":"work","ssspzla4ro":"work","1z174slwzpv":"work","p8vn5le4gr":"work","1fgrs7t0ilw":"work"};
+function personRule(t){
+  const words=(String(t.mkey||'').replace(/^(to|from):/,'')+' '+norm(t.title)).split(/[^a-zа-яёєіїґ]+/);
+  for(const w of words){if(w.length<3)continue;const r=PEOPLE_FP[fp(w)]||(w.length>6&&PEOPLE_FP[fp(w.slice(0,6))]);if(r)return r;}
+  return null;
+}
 function personCat(t){
   if(t.kind!=='expense')return null;
-  const words=(String(t.mkey||'').replace(/^(to|from):/,'')+' '+norm(t.title)).split(/[^a-zа-яёєіїґ]+/);
-  for(const w of words){if(w.length<3)continue;const c=PEOPLE_FP[fp(w)]||(w.length>6&&PEOPLE_FP[fp(w.slice(0,6))]);if(c)return c;}
-  return null;
+  const r=personRule(t);if(!r)return null;
+  if(typeof r==='string')return r;
+  const day=String(t.date).slice(0,10);
+  return (!r.from||day>=r.from)&&(!r.to||day<=r.to)?r.c:null;
 }
 function hasPerson(t,id){return (String(t.mkey||'').replace(/^(to|from):/,'')+' '+norm(t.title)).split(/[^a-zа-яёєіїґ]+/).some(w=>w.length>2&&fp(w)===id);}
 // Разовые уточнения к конкретным операциям: ключ — отпечаток даты и суммы.
@@ -422,9 +429,8 @@ function applyPeople(){
       if(!f.person&&t.cat&&!['transfers','other'].includes(t.cat))continue;
       t.kind='expense';t.cat=f.cat;t.sub=t.sub?t.sub+' · '+f.note:f.note;t.fix=true;t.locked=true;break;
     }
-    if(t.fix||S.rules[t.mkey]!==undefined)continue;
-    if(t.cat&&!['transfers','transfer_in','other'].includes(t.cat))continue;
-    const c=personCat(t);if(c&&c!==t.cat)t.cat=c;
+    if(t.fix||S.rules[t.mkey]!==undefined||!personRule(t))continue;
+    const c=resolveCat(t);if(c!==t.cat)t.cat=c;
   }
 }
 function reapplyRule(mkey){
