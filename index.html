@@ -225,6 +225,8 @@ const DEFAULT_CATS=[
   {id:'fun',name:'Развлечения',e:'🎬',c:'p9',k:'expense'},
   {id:'travel',name:'Путешествия',e:'✈️',c:'p13',k:'expense'},
   {id:'shopping',name:'Покупки',e:'🛍️',c:'p11',k:'expense'},
+  {id:'dog',name:'Собака',e:'🐶',c:'p12',k:'expense'},
+  {id:'work',name:'Работа',e:'💼',c:'p11',k:'expense'},
   {id:'gifts',name:'Подарки',e:'🎁',c:'p10',k:'expense'},
   {id:'cash',name:'Наличные',e:'💵',c:'p12',k:'expense'},
   {id:'transfers',name:'Переводы людям',e:'↗️',c:'p14',k:'expense'},
@@ -236,23 +238,40 @@ const DEFAULT_CATS=[
   {id:'other_in',name:'Другой доход',e:'✨',c:'p14',k:'income'},
 ];
 const BUILTIN_RULES=[
-  ['groceries',/pingo doce|continente|lidl|aldi|mercadona|auchan|minipre|mini preco|intermarch|froiz|\bspar\b|meu super|celeiro|padaria|talho|frutaria|mercearia|supermerc|\bmarket\b|carrefour|spinneys|waitrose/],
-  ['food',/mcdonald|burger|kfc|starbucks|\bbar\b|caf[eé]\b|cafeteria|pastelaria|restaurante|restaurant|pizza|sushi|multi cook|uber eats|glovo|bolt food|tasca|hamburgueria|gelat|churrasqueira|cervejaria|marisqueira|snack|bistro|brunch|kebab|taco|the grow|coffee|bakery|confeitaria|shake shack|five guys|subway|\blounge\b|\bgrill\b|\bdiner\b|\bkitchen\b/],
+  ['dog',/lingua de gat|\bvet\b|veterinar|cl[ií]nica vet|\bpet\b|petbom|pet bom|panda pet|zooplus|tiendanimal|kiwoko|animalife/],
+  ['groceries',/pingo doce|continente|lidl|aldi|mercadona|auchan|minipre|mini preco|intermarch|froiz|\bspar\b|meu super|celeiro|padaria|talho|frutaria|mercearia|supermerc|gastronom|slavyan|slavian|славянск|гастроном|bom sucesso|\bmarket\b|carrefour|spinneys|waitrose/],
+  ['food',/mcdonald|burger|kfc|starbucks|\bbar\b|caf[eé]\b|cafeteria|pastelaria|restaurante|restaurant|pizza|sushi|multi cook|uber eats|glovo|bolt food|tasca|hamburgueria|gelat|churrasqueira|cervejaria|marisqueira|snack|bistro|brunch|kebab|taco|the grow|coffee|bakery|confeitaria|shake shack|five guys|subway|\blounge\b|\bgrill\b|\bdiner\b|\bkitchen\b|garden ?porto/],
   ['transport',/repsol|galp\b|\bbp\b|cepsa|\bprio\b|via verde|\buber\b|\bbolt\b|\blime\b|\bcp\b|comboios|metro|carris|stcp|\bbird\b|freenow|free now|parking|estacionamento|empark|telpark|brisa|andante|flixbus|rede expressos|\bgira\b|combustivel|gasolina|taxi|táxi/],
   ['sport',/playtomic|racket|padel|\bgym\b|fitness|holmes place|solinca|gin[aá]sio|crossfit|yoga|pilates|piscina|decathlon|sport zone/],
   ['subs',/anthropic|openai|chatgpt|netflix|spotify|apple\.com|apple com|icloud|google|youtube|amazon prime|prime video|\bhbo\b|disney|vodafone|\bmeo\b|\bnos\b|\bdigi\b|adobe|notion|figma|canva|dropbox|github|telegram|duolingo|midjourney|cursor|patreon|claude/],
   ['health',/farm[aá]cia|pharmacy|cl[ií]nica|clinic|hospital|\bwells\b|dentist|dentista|m[eé]dic|laborat|an[aá]lises|[oó]ptica|\bcuf\b|luz sa[uú]de|lus[ií]adas|psic[oó]log|terap/],
   ['beauty',/cabeleireir|\bhair\b|salon|sal[aã]o|barbear|nails|unhas|manicure|est[eé]tica|beauty|sephora|douglas|perfum|kiko|primor|\bspa\b|massag|depila|sobrancelh/],
   ['clothes',/\bzara\b|h&m|h & m|primark|\bmango\b|bershka|pull&bear|pull & bear|stradivarius|uniqlo|massimo dutti|c&a|springfield|lefties|\bnike\b|adidas|foot locker|calzedonia|intimissimi|oysho|parfois|vinted|shein|zalando|about you|sapataria|sapatos/],
-  ['home',/\bedp\b|[aá]guas? de|\bepal\b|iberdrola|goldenergy|endesa|galp power|\brenda\b|\brent\b|condom[ií]nio|senhorio|lisboag[aá]s|gas natural|electricidade|internet|seguro/],
+  ['home',/\baguas?\b|\bedp\b|[aá]guas? de|\bepal\b|iberdrola|goldenergy|endesa|galp power|\brenda\b|\brent\b|condom[ií]nio|senhorio|lisboag[aá]s|gas natural|electricidade|internet|seguro/],
   ['shopping',/worten|fnac|ikea|leroy merlin|\baki\b|amazon|aliexpress|\btemu\b|media markt|mediamarkt|radio popular|el corte|flying tiger|tiger\b|ale-hop|alehop|papelaria|staples|kiabi|jysk|zara home|maisons du monde|\baction\b|\bnormal\b|miniso|loja|store|shop/],
   ['travel',/ryanair|easyjet|\btap\b|wizz|booking|airbnb|hotel|hostel|expedia|trip\.com|\bkiwi\b|skyscanner|vueling|lufthansa|\bklm\b|air france|iberia|transavia|omio|rentalcars|europcar|hertz|sixt|aeroporto|airport/],
   ['fun',/cinema|\buci\b|teatro|theatre|museu|museum|concert|concerto|ticketline|\bfever\b|eventbrite|steam|playstation|nintendo|xbox|bowling|karaoke|escape|\bzoo\b|ocean[aá]rio|bilhete|ticket|festival/],
   ['gifts',/flores|florista|presente|\bgift\b/],
 ];
 
+// Отпечаток строки (не шифр, но имя из него не прочитать). Нужен, чтобы имена людей не лежали в открытом коде.
+function fp(str){let h1=0xdeadbeef,h2=0x41c6ce57;for(let i=0;i<str.length;i++){const ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677);}
+  h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909);
+  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);}
+// Люди, которым ты регулярно переводишь, и категория. Ключ: отпечаток слова из имени. Только для расходов.
+const PEOPLE_FP={"w3n9ilcsrl":"home","jeoi8f0k6":"home","wd7rrfwaat":"home","23v428zleee":"home","1umin8g4gjb":"home","ek64n13onh":"home","1jc19smaiv3":"home","1aq55s9ves2":"home","1c5ex921if2":"home","1aexulbsw9r":"sport","15uemxxvejy":"sport","rpirphdiaa":"sport","27fc3rrrjt7":"sport","1wk1t71ffkq":"sport","1f7ttgy7997":"sport","29l1d6svoh9":"sport","1ktbaj7rggp":"sport","c8uxmwrwya":"sport","1b8fau2mjaa":"sport","19ot61ntu24":"sport","28hc56spl5s":"sport","3h3g2t12k1":"transport","1an1vhzceop":"transport","1nr1agcxxko":"transfers","1d2nw9d1wwt":"transfers","1j2mlvtbe7j":"transfers","nq0fuvdn6e":"work","2670j8qvly5":"work","1npoukqfqkf":"work","ssspzla4ro":"work","1z174slwzpv":"work","p8vn5le4gr":"work","1fgrs7t0ilw":"work"};
+function personCat(t){
+  if(t.kind!=='expense')return null;
+  const words=(String(t.mkey||'').replace(/^(to|from):/,'')+' '+norm(t.title)).split(/[^a-zа-яёєіїґ]+/);
+  for(const w of words){if(w.length<3)continue;const c=PEOPLE_FP[fp(w)]||(w.length>6&&PEOPLE_FP[fp(w.slice(0,6))]);if(c)return c;}
+  return null;
+}
+function hasPerson(t,id){return (String(t.mkey||'').replace(/^(to|from):/,'')+' '+norm(t.title)).split(/[^a-zа-яёєіїґ]+/).some(w=>w.length>2&&fp(w)===id);}
+// Разовые уточнения к конкретным операциям: ключ — отпечаток даты и суммы.
+const ONE_OFF=[{"keys":["erkhs3chwq","18guqgp5ser","1f02wpauhy4"],"cat":"sport","note":"падел-турнир"},{"keys":["19rb2lyht5c"],"person":"3h3g2t12k1","cat":"sport","note":"возврат за турнир"}];
 let S=load();
 let UI={tab:'overview',month:null,filterCat:null,search:'',showTransfers:false,acct:null};
+applyPeople();save();
 
 function load(){
   let s=null;
@@ -260,6 +279,7 @@ function load(){
   return migrate(s||{cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),rules:{},tx:[],seeded:false});
 }
 function migrate(s){
+  s.cats=s.cats||[];for(const c of DEFAULT_CATS)if(!s.cats.some(x=>x.id===c.id)){const i=s.cats.findIndex(x=>x.k===c.k&&(x.id==='other'||x.id==='other_in'));s.cats.splice(i<0?s.cats.length:i,0,{...c});}
   s.rules=s.rules||{};s.accounts=s.accounts||{};s.rates=s.rates||{};s.deleted=s.deleted||[];s.banks=s.banks||{};s.partNames=s.partNames||{};
   s.sync=Object.assign({url:'',key:'',last:'',err:''},s.sync||{});
   for(const t of s.tx)if(!t.acct)t.acct=t.src==='manual'?'manual':'revolut';
@@ -303,6 +323,7 @@ function ago(s){const d=toDate(s);if(isNaN(d))return '';const m=Math.round((Date
 function localStamp(iso){const d=new Date(iso);if(isNaN(d))return String(iso||'').replace('T',' ').slice(0,19);const z=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds());}
 async function sha256hex(str){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
 function syncOn(){return !!(S.sync.url&&S.sync.key);}
+function prettyTitle(x){let s=String(x||'').replace(/^(paypal|sumup|sq|ztl|pp|izettle|zettle)\s*\*\s*/i,'').trim()||String(x||'');if(!/[a-zа-яё]/.test(s))s=titleCase(s);return s;}
 function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
 
 /* ============ CSV / Revolut ============ */
@@ -370,6 +391,7 @@ function baseKind(t){return t.amount<0||(t.sub||'').startsWith('возврат')
 function resolveCat(t){
   if(t.kind==='transfer'||S.rules[t.mkey]==='__own')return null;
   if(S.rules[t.mkey]!==undefined)return S.rules[t.mkey];
+  const who=personCat(t);if(who)return who;
   if(t.mkey!=='atm'&&t.mkey!=='internal'&&!t.mkey.startsWith('to:')&&!t.mkey.startsWith('from:')){
     for(const [c,re] of BUILTIN_RULES){if(re.test(t.mkey)){
       if(t.kind==='income'&&cat(c)&&cat(c).k==='expense')continue;return c;}}
@@ -386,7 +408,24 @@ function importList(list){
     t.cat=resolveCat(t);S.tx.push(t);byKey.set(t.key,t);added++;
   }
   S.tx.sort((a,b)=>b.date.localeCompare(a.date));
+  applyPeople();
   save();return {added,updated,dup};
+}
+// Раскладывает уже загруженные переводы людям по правилам выше. Ручные правки не трогает.
+function applyPeople(){
+  for(const t of S.tx){
+    if(t.locked||t.kind==='transfer'||t.fix)continue;
+    const amt=String(Math.round(t.amount*100)/100);
+    for(const f of ONE_OFF){
+      if(!f.keys.includes(fp(t.date.slice(0,10)+'|'+amt))&&!f.keys.includes(fp(t.date.slice(0,7)+'|'+amt)))continue;
+      if(f.person&&!hasPerson(t,f.person))continue;
+      if(!f.person&&t.cat&&!['transfers','other'].includes(t.cat))continue;
+      t.kind='expense';t.cat=f.cat;t.sub=t.sub?t.sub+' · '+f.note:f.note;t.fix=true;t.locked=true;break;
+    }
+    if(t.fix||S.rules[t.mkey]!==undefined)continue;
+    if(t.cat&&!['transfers','transfer_in','other'].includes(t.cat))continue;
+    const c=personCat(t);if(c&&c!==t.cat)t.cat=c;
+  }
 }
 function reapplyRule(mkey){
   const own=S.rules[mkey]==='__own';
@@ -559,7 +598,7 @@ function txRow(t){
   const c=t.cat?cat(t.cat):null;const isTr=t.kind==='transfer';
   const sub=isTr?esc(t.sub||t.desc):(c?esc(c.name):'<span class="nocat">Выбрать категорию</span>')+(t.sub&&!isTr?' · '+esc(t.sub):'')+(t.pending?' · ожидает':'')+(t.excluded?' · не в статистике':'')+(showBank&&t.acct&&t.acct!=='manual'?' · '+esc(bankOf(t.acct).name):'');
   const amt=isTr?`<span class="muted">${fmtS(t.amount)}</span>`:t.kind==='income'||t.amount>0?`<span class="good">+${fmt(t.amount)}</span>`:fmtNeg(t.amount);
-  return `<button class="row ${isTr||t.excluded?'dim':''}" data-act="opentx" data-id="${t.id}">${isTr?`<div class="ic">⇄</div>`:catIcon(c)}<div class="tx"><div class="t">${esc(t.title)}</div><div class="s">${sub}</div></div><div class="a num">${amt}</div></button>`;
+  return `<button class="row ${isTr||t.excluded?'dim':''}" data-act="opentx" data-id="${t.id}">${isTr?`<div class="ic">⇄</div>`:catIcon(c)}<div class="tx"><div class="t">${esc(prettyTitle(t.title))}</div><div class="s">${sub}</div></div><div class="a num">${amt}</div></button>`;
 }
 
 function renderMore(){
@@ -606,7 +645,7 @@ function renderTxSheet(){
   const t=S.tx.find(x=>x.id===sheetState.id);const isTr=t.kind==='transfer';
   const same=S.tx.filter(x=>x.mkey===t.mkey&&x.id!==t.id).length;
   openSheet(`
-    <h2>${esc(t.title)}</h2>
+    <h2>${esc(prettyTitle(t.title))}</h2>
     <div class="amt num ${t.kind==='income'||t.amount>0?'good':''}">${fmtS(t.amount)}</div>
     <div class="sub">${esc(t.date.slice(0,16).replace(' ',' · '))}${t.pending?' · ожидает подтверждения':''}</div>
     ${t.desc&&t.desc!==t.title?`<div class="kv"><span>В выписке</span><b>${esc(t.desc)}</b></div>`:''}
@@ -615,7 +654,7 @@ function renderTxSheet(){
     <div class="seg"><button data-act="setkind" data-k="expense" class="${t.kind==='expense'?'on':''}">Расход</button><button data-act="setkind" data-k="income" class="${t.kind==='income'?'on':''}">Доход</button><button data-act="setkind" data-k="transfer" class="${isTr?'on':''}">Между своими</button></div>
     ${isTr?`<p class="hint">Это перемещение между твоими счетами. В расходах и доходах не учитывается.</p>`:catGrid(t.kind,t.cat)}
     ${t.mkey==='internal'||t.mkey==='exchange'?'':`
-    ${same?`<div class="toggle"><span>Применять ко всем «${esc(t.title)}» <span class="muted">(ещё ${same})</span></span><button class="sw ${sheetState.applyAll?'on':''}" data-act="toggleapply" role="switch" aria-checked="${sheetState.applyAll}"></button></div>`:''}
+    ${same?`<div class="toggle"><span>Применять ко всем «${esc(prettyTitle(t.title))}» <span class="muted">(ещё ${same})</span></span><button class="sw ${sheetState.applyAll?'on':''}" data-act="toggleapply" role="switch" aria-checked="${sheetState.applyAll}"></button></div>`:''}
     <div class="toggle"><span>Не учитывать в статистике</span><button class="sw ${t.excluded?'on':''}" data-act="toggleexcl" role="switch" aria-checked="${t.excluded}"></button></div>`}
     <div class="actions"><button class="btn secondary block" data-act="closesheet">Готово</button><button class="btn danger block" data-act="deltx">Удалить операцию</button></div>
   `);
@@ -633,12 +672,12 @@ function openTriage(){
   const groups={};for(const t of list){(groups[t.mkey]=groups[t.mkey]||{mkey:t.mkey,title:t.title,kind:t.kind,n:0,sum:0,ids:[]});groups[t.mkey].n++;groups[t.mkey].sum+=t.amount;groups[t.mkey].ids.push(t.id);}
   const arr=Object.values(groups).sort((a,b)=>Math.abs(b.sum)-Math.abs(a.sum));
   openSheet(`<h2>Без категории</h2><div class="sub">${list.length} ${plural(list.length,'операция','операции','операций')}. Выбери категорию один раз, и она запомнится.</div>
-    <div class="list">${arr.map(g=>`<button class="row" data-act="triagepick" data-mkey="${esc(g.mkey)}"><div class="ic">?</div><div class="tx"><div class="t">${esc(g.title)}</div><div class="s">${g.n} ${plural(g.n,'операция','операции','операций')} · ${g.kind==='income'?'доход':'расход'}</div></div><div class="a num">${fmtS(g.sum)}</div><span class="chev">›</span></button>`).join('')}</div>`);
+    <div class="list">${arr.map(g=>`<button class="row" data-act="triagepick" data-mkey="${esc(g.mkey)}"><div class="ic">?</div><div class="tx"><div class="t">${esc(prettyTitle(g.title))}</div><div class="s">${g.n} ${plural(g.n,'операция','операции','операций')} · ${g.kind==='income'?'доход':'расход'}</div></div><div class="a num">${fmtS(g.sum)}</div><span class="chev">›</span></button>`).join('')}</div>`);
 }
 function openTriagePick(mkey){
   const t=S.tx.find(x=>x.mkey===mkey&&!x.cat);if(!t)return openTriage();
   sheetState={triageMkey:mkey,kind:t.kind};
-  openSheet(`<h2>${esc(t.title)}</h2><div class="sub">${S.tx.filter(x=>x.mkey===mkey).length} ${plural(S.tx.filter(x=>x.mkey===mkey).length,'операция','операции','операций')} · правило применится ко всем</div>
+  openSheet(`<h2>${esc(prettyTitle(t.title))}</h2><div class="sub">${S.tx.filter(x=>x.mkey===mkey).length} ${plural(S.tx.filter(x=>x.mkey===mkey).length,'операция','операции','операций')} · правило применится ко всем</div>
     <div class="seg"><button data-act="triagekind" data-k="expense" class="${t.kind==='expense'?'on':''}">Расход</button><button data-act="triagekind" data-k="income" class="${t.kind==='income'?'on':''}">Доход</button></div>
     ${catGrid(t.kind,null,'triagecat')}
     <div class="actions"><button class="btn secondary block" data-act="triage">← Назад к списку</button></div>`);
